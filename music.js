@@ -4,6 +4,8 @@
 // 2. Bỏ các file .mp3 đã chuẩn bị vào đó.
 // 3. Liệt kê tên file theo đúng thứ tự muốn phát vào mảng dưới đây.
 //    Có thể để 1 file duy nhất, hoặc nhiều file sẽ tự phát nối tiếp và lặp lại từ đầu.
+//    Lưu ý: file đầu tiên trong danh sách này nên khớp với file đã khai báo ở
+//    <link rel="preload" href="music/track-01.mp3"> trong index.html để được tải sớm nhất.
 // ============================================================
 const MUSIC_TRACKS = [
   'music/track-01.mp3',
@@ -14,6 +16,10 @@ const MUSIC_TRACKS = [
 // true = mỗi lần tải trang sẽ phát các bài theo thứ tự ngẫu nhiên khác nhau
 // false = luôn phát đúng theo thứ tự khai báo ở trên
 const SHUFFLE_TRACKS = true;
+
+// Thời gian tối đa (ms) app.js sẽ chờ nhạc trước khi bắt đầu tải ảnh,
+// dù nhạc có phát được hay không (tránh trang bị "treo" nếu nhạc lỗi/bị chặn autoplay)
+const MAX_WAIT_FOR_MUSIC_MS = 1200;
 
 (function () {
   const toggleBtn = document.getElementById('musicToggle');
@@ -49,8 +55,8 @@ const SHUFFLE_TRACKS = true;
   setButtonUI();
 
   function tryPlay() {
-    if (!musicEnabled || videoIsOpen || !playOrder.length) return;
-    audio.play().catch(() => {
+    if (!musicEnabled || videoIsOpen || !playOrder.length) return Promise.resolve();
+    return audio.play().catch(() => {
       // Trình duyệt chặn autoplay có tiếng cho tới khi có tương tác đầu tiên — sẽ thử lại ở onFirstInteraction
     });
   }
@@ -79,6 +85,21 @@ const SHUFFLE_TRACKS = true;
     document.addEventListener(evt, onFirstInteraction, { once: true, passive: true });
   });
 
+  // ------------------------------------------------------------------
+  // "Sẵn sàng nhạc": app.js sẽ chờ Promise này (tối đa MAX_WAIT_FOR_MUSIC_MS)
+  // trước khi bắt đầu tải manifest.json + dựng lưới ảnh, để nhạc được ưu tiên
+  // tải/phát trước. Coi như "sẵn sàng" khi: audio có thể phát (canplay),
+  // hoặc phát lỗi, hoặc hết thời gian chờ — tuỳ điều kiện nào tới trước.
+  // ------------------------------------------------------------------
+  const musicReady = new Promise((resolve) => {
+    if (!playOrder.length) { resolve(); return; }
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    audio.addEventListener('canplay', finish, { once: true });
+    audio.addEventListener('error', finish, { once: true });
+    setTimeout(finish, MAX_WAIT_FOR_MUSIC_MS);
+  });
+
   // Thử phát ngay khi trang tải xong (sẽ thành công nếu trình duyệt cho phép,
   // nếu không thì sẽ tự phát ở lần tương tác đầu tiên phía trên)
   tryPlay();
@@ -93,8 +114,9 @@ const SHUFFLE_TRACKS = true;
     }
   });
 
-  // API dùng chung cho app.js: tạm dừng nhạc khi mở video, phát lại theo trạng thái nút khi đóng video
+  // API dùng chung cho app.js
   window.GalleryMusic = {
+    ready: musicReady, // Promise: app.js await cái này trước khi tải ảnh
     pauseForVideo() {
       videoIsOpen = true;
       tryPause();

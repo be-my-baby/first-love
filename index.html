@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thư viện ảnh</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thư viện ảnh</title>
 
+<!-- Ưu tiên tải nhạc trước: trình duyệt sẽ bắt đầu tải file nhạc đầu tiên
+     song song, sớm nhất có thể, ngay khi vừa nhận được HTML này -->
+<link rel="preload" href="music/track-01.mp3" as="audio">
+
+<link rel="stylesheet" href="style.css">
+</head>
 <body>
 
   <header class="site-header">
+    <div class="spotify-embed-wrap">
+      <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/0KtqyTM7SO6HpRW0r4IVBt?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+    </div>
     <h1>Thư viện ảnh</h1>
     <p class="count" id="photoCount"></p>
+
+    <!-- Nhạc nền cục bộ (music.js điều khiển) -->
+    <audio id="bg-audio" preload="auto" autoplay playsinline></audio>
+    <button id="musicToggle" class="music-toggle" aria-pressed="true" aria-label="Tắt/mở nhạc nền">
+      <span id="musicIconOn">&#127925; Nhạc: Bật</span>
+      <span id="musicIconOff" hidden>&#128263; Nhạc: Tắt</span>
+    </button>
   </header>
 
   <main id="grid" class="grid" aria-live="polite"></main>
@@ -20,27 +33,14 @@
   <div id="sentinel-top" class="sentinel"></div>
   <div id="sentinel-bottom" class="sentinel"></div>
 
-  <!-- Nhạc nền phát từ file mp3 cục bộ -->
-  <audio id="bg-audio" preload="auto"></audio>
-  <button id="musicToggle" class="music-toggle" aria-pressed="true" aria-label="Bật/tắt nhạc nền">
-    <svg id="musicIconOn" viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
-      <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" />
-    </svg>
-    <svg id="musicIconOff" viewBox="0 0 20 20" width="20" height="20" fill="currentColor" hidden>
-      <path
-        d="M12 3v6.6l2 2V7h4V3h-6zM3.3 2.3 2 3.6 8.4 10H8v4a2 2 0 0 0 2.8 1.8l1.9 1.9A4 4 0 0 1 6 14a4 4 0 0 1 4-4h.6l1 1H10v3l9.7 9.7 1.3-1.3L3.3 2.3z" />
-    </svg>
-    <span class="music-label"></span>
-  </button>
-
   <div id="lightbox" class="lightbox">
     <button class="lightbox-close" id="lightboxClose" aria-label="Đóng">&times;</button>
     <img id="lightboxImg" src="" alt="">
     <video id="lightboxVideo" controls playsinline></video>
   </div>
 
+  <!-- music.js load và chạy TRƯỚC app.js để trình duyệt lo phần nhạc trước -->
   <script src="music.js"></script>
   <script src="app.js"></script>
 </body>
-
 </html>

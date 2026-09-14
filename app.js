@@ -14,6 +14,13 @@
   const UNMOUNT_MARGIN = '-2400px 0px -2400px 0px'; // vùng để GIẢI PHÓNG nội dung đã ra xa
   const EAGER_COUNT = 8; // số ảnh đầu tiên tải ngay lập tức, ưu tiên cao (above the fold)
 
+  // Ưu tiên nhạc: chờ music.js báo "sẵn sàng" (đã canplay, lỗi, hoặc hết thời gian chờ)
+  // rồi mới bắt đầu tải manifest.json + dựng lưới ảnh. Nếu music.js chưa tồn tại/lỗi
+  // (ví dụ trang không dùng nhạc), bỏ qua bước chờ này ngay.
+  if (window.GalleryMusic && window.GalleryMusic.ready) {
+    try { await window.GalleryMusic.ready; } catch (err) { /* bỏ qua, vẫn tiếp tục tải ảnh */ }
+  }
+
   let items = [];
   try {
     const res = await fetch('manifest.json', { cache: 'no-store' });
@@ -142,8 +149,9 @@
         lightboxVideo.src = tile.dataset.src;
         lightboxVideo.poster = tile.dataset.poster;
         lightboxVideo.muted = false;
-        lightboxVideo.play().catch(() => {});
+        // Tạm dừng nhạc nền khi mở video, tránh chồng tiếng
         if (window.GalleryMusic) window.GalleryMusic.pauseForVideo();
+        lightboxVideo.play().catch(() => {});
       } else {
         lightboxVideo.hidden = true;
         lightboxVideo.pause();
@@ -162,10 +170,10 @@
   function closeLightbox() {
     lightbox.classList.remove('is-open');
     lightboxImg.src = '';
-    const wasVideo = !lightboxVideo.hidden;
     lightboxVideo.pause();
     lightboxVideo.removeAttribute('src');
-    if (wasVideo && window.GalleryMusic) window.GalleryMusic.resumeAfterVideo();
+    // Phát lại nhạc nền (nếu người dùng đang để bật) khi đóng video
+    if (window.GalleryMusic) window.GalleryMusic.resumeAfterVideo();
   }
   lightboxClose.addEventListener('click', closeLightbox);
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
